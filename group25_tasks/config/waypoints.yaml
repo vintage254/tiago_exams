@@ -1,0 +1,20 @@
+# Exploration waypoints for Group 25 environment
+# These cover all rooms in the group25 world
+# Format: [x, y, yaw_radians]
+exploration_waypoints:
+  - [0.0, -2.5, 0.0]        # Kitchen center
+  - [-1.5, -1.0, 1.57]      # Kitchen upper-left
+  - [-2.0, -3.5, 3.14]      # Kitchen lower-left
+  - [1.0, -3.5, -1.57]      # Kitchen lower-right
+  - [1.0, -1.0, 0.0]        # Kitchen upper-right
+  - [1.5, -4.0, -1.57]      # Near passage
+  - [2.5, -5.0, -1.57]      # Through passage
+  - [1.0, -6.0, 3.14]       # Large room left
+  - [0.5, -5.5, 0.0]        # Near pick surface
+  - [3.5, -5.5, 0.0]        # Large room center
+  - [5.0, -5.0, 0.0]        # Near closet
+  - [5.0, -7.0, -1.57]      # Near sofa
+  - [3.0, -8.5, 3.14]       # Large room bottom
+  - [2.0, -8.5, 3.14]       # Near place surface
+  - [1.0, -7.5, 1.57]       # Large room left-bottom
+  - [0.0, -3.0, 0.0]        # Return to kitchen area

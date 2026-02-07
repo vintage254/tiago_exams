@@ -1,0 +1,16 @@
+# Build artifacts
+build/
+install/
+log/
+
+# IDE
+.vscode/
+*.pyc
+__pycache__/
+
+# Backup git
+.git_backup/
+
+# OS files
+.DS_Store
+Thumbs.db
