@@ -2,129 +2,203 @@
 
 University of Bologna - Robotics Exam 2025
 
-## Repository Structure
+## What's in This Repo
+
+This repo IS the complete `tiago_ws/src` folder. Everything is included:
 
 ```
-tiago_ws/src/
-├── tiago_exam/              # Provided: simulation launch files
-├── tiago_exam_worlds/       # Provided: world files + models
-│   └── worlds/
-│       └── group25.world    # OUR group's world file
-├── group25_tasks/           # OUR CODE: 3 task nodes + launch files
+tiago_exams/                      (this repo)
+├── group25_tasks/                # OUR CODE — 3 task scripts + launch files
 │   ├── scripts/
-│   │   ├── task1_exploration.py
-│   │   ├── task2_aruco_navigation.py
-│   │   └── task3_pick_and_place.py
+│   │   ├── task1_exploration.py       # Task 1: SLAM autonomous exploration
+│   │   ├── task2_aruco_navigation.py  # Task 2: ArUco marker navigation
+│   │   └── task3_pick_and_place.py    # Task 3: Pick and place pipeline
 │   ├── launch/
 │   │   ├── task1_mapping.launch.py
 │   │   ├── task2_navigation.launch.py
 │   │   └── task3_pick_place.launch.py
-│   ├── config/
-│   │   └── waypoints.yaml
+│   ├── config/waypoints.yaml
 │   ├── CMakeLists.txt
 │   └── package.xml
-└── (other TIAGo packages already in workspace)
-```
-
-## Setup on Ubuntu Machine
-
-### 1. Prerequisites
-- Ubuntu 22.04
-- ROS2 Humble installed
-- TIAGo workspace (`tiago_ws`) already set up with all TIAGo packages
-
-### 2. Clone this repo into the workspace
-```bash
-cd ~/tiago_ws/src
-git clone <REPO_URL>
-```
-
-### 3. Copy files into place
-```bash
-# Copy the world file
-cp group25-exam/group25.world ~/tiago_ws/src/tiago_exam_worlds/worlds/group25.world
-
-# Copy the exam packages (if not already there)
-cp -r group25-exam/tiago_exam ~/tiago_ws/src/
-cp -r group25-exam/tiago_exam_worlds ~/tiago_ws/src/
-
-# Copy our custom task package
-cp -r group25-exam/group25_tasks ~/tiago_ws/src/
-```
-
-### 4. Make scripts executable
-```bash
-chmod +x ~/tiago_ws/src/group25_tasks/scripts/*.py
-```
-
-### 5. Build
-```bash
-cd ~/tiago_ws
-colcon build --symlink-install
-source install/setup.bash
+├── tiago_exam/                   # Exam launch files (from professor)
+├── tiago_exam_worlds/            # World files + models (includes group25.world)
+└── src/                          # All TIAGo robot packages
+    ├── tiago_robot/
+    ├── tiago_simulation/
+    ├── tiago_moveit_config/
+    ├── tiago_navigation/
+    ├── pal_navigation_cfg_public/
+    ├── pymoveit2/
+    └── ...more packages
 ```
 
 ---
 
-## Running the Tasks
+## Setup on Ubuntu 22.04 (Step by Step)
+
+### Step 1: Install ROS2 Humble
+
+If not already installed, follow:
+https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html
+
+After install, add to your `~/.bashrc`:
+```bash
+source /opt/ros/humble/setup.bash
+```
+
+### Step 2: Install required system packages
+
+```bash
+sudo apt update
+sudo apt install -y \
+  ros-humble-nav2-bringup \
+  ros-humble-slam-toolbox \
+  ros-humble-gazebo-ros-pkgs \
+  ros-humble-cv-bridge \
+  ros-humble-moveit \
+  ros-humble-moveit-ros-planning \
+  ros-humble-moveit-ros-move-group \
+  python3-opencv \
+  python3-colcon-common-extensions \
+  ros-humble-play-motion2 \
+  ros-humble-controller-manager \
+  ros-humble-joint-trajectory-controller
+```
+
+### Step 3: Clone this repo as your workspace
+
+```bash
+cd ~
+git clone https://github.com/vintage254/tiago_exams.git tiago_ws/src
+```
+
+This creates `~/tiago_ws/src/` with everything inside.
+
+### Step 4: Make all Python scripts executable
+
+```bash
+chmod +x ~/tiago_ws/src/group25_tasks/scripts/*.py
+chmod +x ~/tiago_ws/src/tiago_exam/scripts/*.py
+```
+
+### Step 5: Build the workspace
+
+```bash
+cd ~/tiago_ws
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install
+```
+
+If the build succeeds, source it:
+```bash
+source ~/tiago_ws/install/setup.bash
+```
+
+Add this to `~/.bashrc` so you don't have to source every time:
+```bash
+echo "source ~/tiago_ws/install/setup.bash" >> ~/.bashrc
+```
+
+---
+
+## Running the 3 Tasks
+
+**IMPORTANT:** For every new terminal, always run:
+```bash
+source ~/tiago_ws/install/setup.bash
+```
+
+---
 
 ### Task 1: SLAM Map Generation
 
-**Terminal 1** - Launch simulation:
+The robot explores the environment autonomously and builds a map.
+
+**Terminal 1** — Start the simulation:
 ```bash
-source ~/tiago_ws/install/setup.bash
 ros2 launch tiago_exam tiago_exam.launch.py world_name:=group25
 ```
+Wait until Gazebo is fully loaded and the robot is visible.
 
-**Terminal 2** - Launch SLAM + exploration:
+**Terminal 2** — Start SLAM + autonomous exploration:
 ```bash
-source ~/tiago_ws/install/setup.bash
 ros2 launch group25_tasks task1_mapping.launch.py
 ```
+The robot will:
+1. Do a 360-degree rotation to seed the SLAM map
+2. Navigate through 17 waypoints covering the entire environment
+3. Print progress to the terminal
 
-**Terminal 3** - Save map (after exploration finishes):
+**Terminal 3** — Save the map (after exploration completes):
 ```bash
 mkdir -p ~/my_map
 ros2 run nav2_map_server map_saver_cli -f ~/my_map/map
 ```
 
+This creates `~/my_map/map.pgm` and `~/my_map/map.yaml`. You need these for Tasks 2 and 3.
+
+**Kill everything** with Ctrl+C in all terminals before starting Task 2.
+
 ---
 
-### Task 2: Navigation to Pick/Place Locations
+### Task 2: Navigation to Pick/Place Locations Using ArUco
 
-**IMPORTANT:** For Task 2, the robot must start at a DIFFERENT position.
-Edit `tiago_exam/launch/tiago_spawn.launch.py` line 33 to change:
+The robot uses the saved map to navigate, detects ArUco markers on the pick and place surfaces, and drives to them.
+
+**IMPORTANT — Change spawn position first:**
+Edit `~/tiago_ws/src/tiago_exam/launch/tiago_spawn.launch.py`, line 33.
+Change from:
 ```python
-spawn_coordinates = [2.0, -3.0, 0.0]  # Different from Task 1
+spawn_coordinates = [0.0, -1.3, 0.0]
+```
+To a different position, e.g.:
+```python
+spawn_coordinates = [2.0, -3.0, 0.0]
 ```
 
-**Terminal 1** - Launch simulation:
+**Terminal 1** — Start the simulation:
 ```bash
-source ~/tiago_ws/install/setup.bash
 ros2 launch tiago_exam tiago_exam.launch.py world_name:=group25
 ```
 
-**Terminal 2** - Launch navigation + ArUco search:
+**Terminal 2** — Start navigation + ArUco detection:
 ```bash
-source ~/tiago_ws/install/setup.bash
-ros2 launch group25_tasks task2_navigation.launch.py map_path:=$HOME/my_map
+ros2 launch group25_tasks task2_navigation.launch.py map_path:=$HOME/my_map/map.yaml
 ```
+
+The robot will:
+1. Move to search positions around the environment
+2. Rotate and look for ArUco marker ID 26 (pick surface) and ID 238 (place surface)
+3. Navigate to each detected surface
+
+**Kill everything** with Ctrl+C before starting Task 3.
 
 ---
 
 ### Task 3: Pick and Place
 
-**Terminal 1** - Launch simulation WITH MoveIt:
+The robot picks up two ArUco cubes from the pick surface and places them on the place surface.
+
+**Note:** Change spawn position back or use any appropriate position.
+
+**Terminal 1** — Start the simulation WITH MoveIt:
 ```bash
-source ~/tiago_ws/install/setup.bash
 ros2 launch tiago_exam tiago_exam.launch.py world_name:=group25 moveit:=true
 ```
 
-**Terminal 2** - Launch navigation + pick-and-place:
+**Terminal 2** — Start navigation + pick-and-place:
 ```bash
-source ~/tiago_ws/install/setup.bash
-ros2 launch group25_tasks task3_pick_place.launch.py map_path:=$HOME/my_map
+ros2 launch group25_tasks task3_pick_place.launch.py map_path:=$HOME/my_map/map.yaml
 ```
+
+The robot will:
+1. Navigate to the pick surface (ArUco ID 26)
+2. Detect cube with ArUco ID 63
+3. Pick it up using the arm + gripper
+4. Navigate to the place surface (ArUco ID 238)
+5. Place the cube
+6. Return for the second cube (ArUco ID 582)
+7. Pick and place the second cube
 
 ---
 
@@ -132,22 +206,39 @@ ros2 launch group25_tasks task3_pick_place.launch.py map_path:=$HOME/my_map
 
 | Item | Value |
 |------|-------|
-| Surface ArUco markers | ID 26 (pick), ID 238 (place), 25 cm |
-| Cube ArUco markers | ID 63, ID 582, 7 cm |
-| Cube dimensions | 7 x 7 x 7 cm |
+| Surface ArUco markers | ID 26 (pick table), ID 238 (place table), 25 cm |
+| Cube ArUco markers | ID 63 (first), ID 582 (second), 7 cm |
+| Cube dimensions | 7 x 7 x 7 cm, 0.05 kg |
 | ArUco dictionary | DICT_ARUCO_ORIGINAL |
 | Pick order | ID 63 first, then ID 582 |
-| Robot spawn (Task 1) | (0.0, -1.3, 0.0) |
+| Robot default spawn | (0.0, -1.3, 0.0) |
+| Pick surface world position | (0.95, -5.6, 0.15) |
+| Place surface world position | (2.5, -9.0, 0.15) |
+
+---
 
 ## Troubleshooting
 
-If Gazebo doesn't close properly after Ctrl+C:
+**Gazebo won't close properly after Ctrl+C:**
 ```bash
-ps -ef | grep ros
-sudo kill -9 <PID>
+killall -9 gzserver gzclient
 ```
 
-If navigation parameters need tuning, edit:
+**"Could not find controller" errors:**
+Make sure MoveIt is enabled for Task 3:
+```bash
+ros2 launch tiago_exam tiago_exam.launch.py world_name:=group25 moveit:=true
 ```
-tiago_ws/src/pal_navigation_cfg_public/pal_navigation_cfg_params/params/pmb2_nav2.yaml
+
+**Robot doesn't move / NavigateToPose fails:**
+- Check that Nav2 is running: `ros2 node list | grep nav`
+- Check the map loaded: `ros2 topic echo /map --once`
+
+**Arm joint positions need tuning:**
+The predefined arm positions in `task3_pick_and_place.py` are approximate. If the robot misses the cubes, adjust `_home_position`, `_pre_grasp_position`, and the grasp sequence joint values in the script.
+
+**Navigation parameters:**
+If the robot has trouble navigating, edit:
+```
+~/tiago_ws/src/src/pal_navigation_cfg_public/pal_navigation_cfg_params/params/pmb2_nav2.yaml
 ```
